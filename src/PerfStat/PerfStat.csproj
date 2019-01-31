@@ -35,12 +35,12 @@
   
   <ItemGroup Condition="$(DefineConstants.Contains('MONOGAME'))">
     <PackageReference Include="MonoGame.Framework.Portable" PrivateAssets="All" Version="3.6.0.1625" />
-    <PackageReference Include="NvgSharp.MonoGame" Version="0.5.0.1" />
+    <PackageReference Include="NvgSharp.MonoGame" Version="0.5.1.3" />
   </ItemGroup>
 
   <ItemGroup Condition="$(DefineConstants.Contains('FNA'))">
     <ProjectReference Include="..\..\deps\FNA\FNA.Core.csproj" />
-    <PackageReference Include="NvgSharp.FNA" Version="0.5.0.1" />
+    <PackageReference Include="NvgSharp.FNA" Version="0.5.1.3" />
   </ItemGroup>
 
   <ItemGroup Condition="$(DefineConstants.Contains('XENKO'))">

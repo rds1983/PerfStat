@@ -21,10 +21,10 @@ namespace PerfStat
 			_name = name;
 		}
 
-		public void Update(float frameTime)
+		public void Update(double frameTime)
 		{
 			_head = (_head + 1) % _values.Length;
-			_values[_head] = frameTime;
+			_values[_head] = (float)frameTime;
 		}
 
 		public float GetAverage()
@@ -37,7 +37,7 @@ namespace PerfStat
 			return avg / _values.Length;
 		}
 
-		public void Render(NvgContext vg, float x, float y)
+		public void Render(NvgContext vg, int x, int y)
 		{
 			int i;
 			float avg, w, h;
@@ -63,7 +63,7 @@ namespace PerfStat
 					float vx, vy;
 					if (v > 80.0f)
 						v = 80.0f;
-					vx = x + ((float)i / (_values.Length - 1)) * w;
+					vx = x + (float)i / (_values.Length - 1) * w;
 					vy = y + h - ((v / 80.0f) * h);
 					vg.LineTo(vx, vy);
 				}
@@ -101,7 +101,7 @@ namespace PerfStat
 			var fontId = Resources.GetDefaultFontId(vg);
 			vg.FontFaceId(fontId);
 
-			if (string.IsNullOrEmpty(_name))
+			if (!string.IsNullOrEmpty(_name))
 			{
 				vg.FontSize(14.0f);
 				vg.TextAlign(Alignment.Left | Alignment.Top);

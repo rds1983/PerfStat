@@ -14,9 +14,9 @@ namespace PerfStat.Samples.Demo
 	{
 		GraphicsDeviceManager _graphics;
 
-		private NvgContext _context;
 		private SpriteBatch _spriteBatch;
 		private Demo _demo;
+		private NvgContext _context;
 		private readonly PerfGraphWidget _perfGraph = new PerfGraphWidget();
 
 		public Game1()
@@ -43,7 +43,7 @@ namespace PerfStat.Samples.Demo
 		{
 			var device = GraphicsDevice;
 
-			_context = new NvgContext(GraphicsDevice, 0);
+			_context = new NvgContext(GraphicsDevice);
 
 			_demo = new Demo();
 			_demo.loadDemoData(GraphicsDevice, _context);
@@ -64,20 +64,8 @@ namespace PerfStat.Samples.Demo
 		{
 			base.Update(gameTime);
 
-			_perfGraph.Update((float)gameTime.ElapsedGameTime.TotalSeconds);
-
-			if (dt == null)
-			{
-				dt = DateTime.Now;
-			}
-			else if ((DateTime.Now - dt.Value).TotalSeconds >= 1)
-			{
-				Trace.WriteLine("FPS: " + 1.0f / _perfGraph.GetAverage());
-				dt = DateTime.Now;
-			}
+			_perfGraph.Update(gameTime.ElapsedGameTime.TotalSeconds);
 		}
-
-		DateTime? dt;
 
 		/// <summary>
 		/// This is called when the game should draw itself.
