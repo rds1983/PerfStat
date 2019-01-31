@@ -29,6 +29,7 @@ For now it only provides performance statistics widget:
   _perfGraph.Render(_nvgContext, 5, 5);
   _nvgContext.EndFrame();
   ```
+  
   Where `_graphics` is GraphicsDeviceManager.
 6. Performance statistics widget should appear:
 ![](/images/perfstat.gif)
