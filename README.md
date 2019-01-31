@@ -25,6 +25,7 @@ Utility library that collects and visualises the performance statistics of a Mon
   _perfGraph.Render(_nvgContext, 5, 5);
   _nvgContext.EndFrame();
   ```
+  Where `_graphics` is GraphicsDeviceManager.
 6. Performance statistics widget should appear:
 ![](/images/perfstat.gif)
 
