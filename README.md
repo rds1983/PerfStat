@@ -2,8 +2,6 @@
 Utility library that collects and visualises the performance statistics of a MonoGame/FNA game.
 
 # Usage
-
-# Adding Reference
 1. `Install-Package PerfStat.MonoGame` (or `Install-Package PerfStat.FNA` for FNA)
 2. Add following usings:
   ```c#
