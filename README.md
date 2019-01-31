@@ -1,5 +1,7 @@
 # PerfStat
-Utility library that collects and visualises the performance statistics of a MonoGame/FNA game. For now it only provides performance statistics visualisation widget:
+Utility library that collects and visualises the performance statistics of a MonoGame/FNA game. 
+
+For now it only provides performance statistics widget:
 
 ![](/images/perfwidget.png)
 
