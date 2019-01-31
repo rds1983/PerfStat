@@ -25,11 +25,11 @@ For now it only provides performance statistics widget:
   ```c#
   _perfGraph.Update(gameTime.ElapsedGameTime.TotalSeconds);
 
-  _nvgContext.BeginFrame(_graphics.PreferredBackBufferWidth, _graphics.PreferredBackBufferHeight, 1.0f);
+  _nvgContext.BeginFrame(graphics.PreferredBackBufferWidth, graphics.PreferredBackBufferHeight, 1.0f);
   _perfGraph.Render(_nvgContext, 5, 5);
   _nvgContext.EndFrame();
   ```  
-  Where `_graphics` is GraphicsDeviceManager.
+  Where `graphics` is GraphicsDeviceManager.
 
 6. Performance statistics widget should appear:
 ![](/images/perfstat.gif)
