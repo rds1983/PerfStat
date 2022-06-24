@@ -21,8 +21,7 @@ There are two ways of referencing PerfStat in the project:
 
 # Usage
 1. PerfStat requires Game to be created with stencil.
-2. 
-That could be archived by setting PreferredDepthStencilFormat to DepthFormat.Depth24Stencil8 in the GraphicsDeviceManager creation.
+   That could be archived by setting PreferredDepthStencilFormat to DepthFormat.Depth24Stencil8 in the GraphicsDeviceManager creation.
 
 I.e.
 ```c#
