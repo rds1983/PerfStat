@@ -1,30 +1,33 @@
-﻿using Microsoft.Xna.Framework;
-using Microsoft.Xna.Framework.Graphics;
-using System;
+﻿using System;
 using System.IO;
 using FontStashSharp;
 using NvgSharp;
+
+#if MONOGAME || FNA
+using Microsoft.Xna.Framework;
+using Microsoft.Xna.Framework.Graphics;
+#elif STRIDE
+using Stride.Core.Mathematics;
+#else
+using System.Drawing;
+using Texture2D = System.Object;
+#endif
 
 namespace PerfStat.Samples.Demo
 {
 	public class Demo
 	{
-		private static readonly string ICON_SEARCH = Char.ConvertFromUtf32(0x1F50D);
-		private static readonly string ICON_CIRCLED_CROSS = Char.ConvertFromUtf32(0x2716);
-		private static readonly string ICON_CHEVRON_RIGHT = Char.ConvertFromUtf32(0xE75E);
-		private static readonly string ICON_CHECK = Char.ConvertFromUtf32(0x2713);
-		private static readonly string ICON_LOGIN = Char.ConvertFromUtf32(0xE740);
-		private static readonly string ICON_TRASH = Char.ConvertFromUtf32(0xE729);
+		private static readonly string ICON_SEARCH = char.ConvertFromUtf32(0x1F50D);
+		private static readonly string ICON_CIRCLED_CROSS = char.ConvertFromUtf32(0x2716);
+		private static readonly string ICON_CHEVRON_RIGHT = char.ConvertFromUtf32(0xE75E);
+		private static readonly string ICON_CHECK = char.ConvertFromUtf32(0x2713);
+		private static readonly string ICON_LOGIN = char.ConvertFromUtf32(0xE740);
+		private static readonly string ICON_TRASH = char.ConvertFromUtf32(0xE729);
 
-		int fontNormal, fontBold, fontIcons;
-		int[] images = new int[12];
+		public FontSystem fontSystemNormal, fontSystemBold, fontSystemIcons;
+		SpriteFontBase fontSans18, fontSans20, fontBold18, fontBold20;
+		Texture2D[] images = new Texture2D[12];
 
-		//static float minf(float a, float b) { return a < b ? a : b; }
-		static float maxf(float a, float b)
-		{
-			return a > b ? a : b;
-		}
-		//static float absf(float a) { return a >= 0.0f ? a : -a; }
 		static float clampf(float a, float mn, float mx)
 		{
 			return a < mn ? mn : (a > mx ? mx : a);
@@ -36,30 +39,57 @@ namespace PerfStat.Samples.Demo
 			return col == Color.Transparent;
 		}
 
-		static int mini(int a, int b)
+		public Demo(NvgContext vg)
 		{
-			return a < b ? a : b;
+			for (var i = 0; i < images.Length; i++)
+			{
+				var path = "Assets/images/image" + (i + 1).ToString() + ".jpg";
+
+#if MONOGAME || FNA || STRIDE
+				using (var stream = File.OpenRead(path))
+				{
+					images[i] = Texture2D.FromStream(vg.GraphicsDevice, stream);
+				}
+#else
+				ImageResult imageResult;
+				using (var stream = File.OpenRead(path))
+				{
+					imageResult = ImageResult.FromStream(stream, ColorComponents.RedGreenBlueAlpha);
+				}
+
+				images[i] = vg.TextureManager.CreateTexture(imageResult.Width, imageResult.Height);
+				vg.TextureManager.SetTextureData(images[i], new Rectangle(0, 0, imageResult.Width, imageResult.Height), imageResult.Data);
+#endif
+			}
+
+			fontSystemIcons = LoadFont("Assets/entypo.ttf");
+			fontSystemNormal = LoadFont("Assets/Roboto-Regular.ttf");
+			fontSystemBold = LoadFont("Assets/Roboto-Bold.ttf");
+
+			fontSans18 = fontSystemNormal.GetFont(18);
+			fontSans20 = fontSystemNormal.GetFont(20);
+
+			fontBold18 = fontSystemBold.GetFont(18);
+			fontBold20 = fontSystemBold.GetFont(20);
 		}
 
-
-		public static void drawWindow(NvgContext vg, string title, float x, float y, float w, float h)
+		public void drawWindow(NvgContext vg, string title, float x, float y, float w, float h)
 		{
 			float cornerRadius = 3.0f;
 			Paint shadowPaint;
 			Paint headerPaint;
 
-			vg.Save();
-			//	ClearState(vg);
+			vg.SaveState();
 
 			// Window
 			vg.BeginPath();
 			vg.RoundedRect(x, y, w, h, cornerRadius);
-			vg.FillColor(new Color(28, 30, 34, 192));
-			//	vg.FillColor(new Color(0,0,0,128));
+			vg.FillColor(Utility.FromRGBA(28, 30, 34, 192));
+			//	vg.FillColor(GLUtility.FromRGBA(0,0,0,128));
 			vg.Fill();
 
 			// Drop shadow
-			shadowPaint = vg.BoxGradient(x, y + 2, w, h, cornerRadius * 2, 10, new Color(0, 0, 0, 128), new Color(0, 0, 0, 0));
+			shadowPaint = vg.BoxGradient(x, y + 2, w, h, cornerRadius * 2, 10, Utility.FromRGBA(0, 0, 0, 128), Utility.FromRGBA(0, 0, 0, 0));
 			vg.BeginPath();
 			vg.Rect(x - 10, y - 10, w + 20, h + 30);
 			vg.RoundedRect(x, y, w, h, cornerRadius);
@@ -68,7 +98,7 @@ namespace PerfStat.Samples.Demo
 			vg.Fill();
 
 			// Header
-			headerPaint = vg.LinearGradient(x, y, x, y + 15, new Color(255, 255, 255, 8), new Color(0, 0, 0, 16));
+			headerPaint = vg.LinearGradient(x, y, x, y + 15, Utility.FromRGBA(255, 255, 255, 8), Utility.FromRGBA(0, 0, 0, 16));
 			vg.BeginPath();
 			vg.RoundedRect(x + 1, y + 1, w - 2, 30, cornerRadius - 1);
 			vg.FillPaint(headerPaint);
@@ -76,68 +106,48 @@ namespace PerfStat.Samples.Demo
 			vg.BeginPath();
 			vg.MoveTo(x + 0.5f, y + 0.5f + 30);
 			vg.LineTo(x + 0.5f + w - 1, y + 0.5f + 30);
-			vg.StrokeColor(new Color(0, 0, 0, 32));
+			vg.StrokeColor(Utility.FromRGBA(0, 0, 0, 32));
 			vg.Stroke();
 
-			vg.FontSize(18.0f);
-			vg.FontFace("sans-bold");
-			vg.TextAlign(Alignment.Center | Alignment.Middle);
+			vg.FillColor(Utility.FromRGBA(0, 0, 0, 128));
+			vg.Text(fontBold18, title, x + w / 2, y + 16 + 1, TextHorizontalAlignment.Center, TextVerticalAlignment.Center);
 
-			vg.FontBlur(2);
-			vg.FillColor(new Color(0, 0, 0, 128));
-			vg.Text(x + w / 2, y + 16 + 1, title);
+			vg.FillColor(Utility.FromRGBA(220, 220, 220, 160));
+			vg.Text(fontBold18, title, x + w / 2, y + 16, TextHorizontalAlignment.Center, TextVerticalAlignment.Center);
 
-			vg.FontBlur(0);
-			vg.FillColor(new Color(220, 220, 220, 160));
-			vg.Text(x + w / 2, y + 16, title);
-
-			vg.Restore();
+			vg.RestoreState();
 		}
 
-		public static void drawSearchBox(NvgContext vg, string text, float x, float y, float w, float h)
+		public void drawSearchBox(NvgContext vg, string text, float x, float y, float w, float h)
 		{
 			Paint bg;
 			float cornerRadius = h / 2 - 1;
 
 			// Edit
-			bg = vg.BoxGradient(x, y + 1.5f, w, h, h / 2, 5, new Color(0, 0, 0, 16), new Color(0, 0, 0, 92));
+			bg = vg.BoxGradient(x, y + 1.5f, w, h, h / 2, 5, Utility.FromRGBA(0, 0, 0, 16), Utility.FromRGBA(0, 0, 0, 92));
 			vg.BeginPath();
 			vg.RoundedRect(x, y, w, h, cornerRadius);
 			vg.FillPaint(bg);
 			vg.Fill();
 
-			/*	vg.BeginPath();
-				vg.RoundedRect(x+0.5f,y+0.5f, w-1,h-1, cornerRadius-0.5f);
-				vg.StrokeColor(new Color(0,0,0,48));
-				vg.Stroke();*/
+			var fontIcons = fontSystemIcons.GetFont((int)(h * 1.3f));
 
-			vg.FontSize(h * 1.3f);
-			vg.FontFace("icons");
-			vg.FillColor(new Color(255, 255, 255, 64));
-			vg.TextAlign(Alignment.Center | Alignment.Middle);
-			vg.Text(x + h * 0.55f, y + h * 0.55f, ICON_SEARCH);
+			vg.FillColor(Utility.FromRGBA(255, 255, 255, 64));
+			vg.Text(fontIcons, ICON_SEARCH, x + h * 0.55f, y + h * 0.55f, TextHorizontalAlignment.Center, TextVerticalAlignment.Center);
 
+			vg.FillColor(Utility.FromRGBA(255, 255, 255, 32));
+			vg.Text(fontSans20, text, x + h * 1.05f, y + h * 0.5f, TextHorizontalAlignment.Left, TextVerticalAlignment.Center);
 
-			vg.FontSize(20.0f);
-			vg.FontFace("sans");
-			vg.FillColor(new Color(255, 255, 255, 32));
-
-			vg.TextAlign(Alignment.Left | Alignment.Middle);
-			vg.Text(x + h * 1.05f, y + h * 0.5f, text);
-
-			vg.FontSize(h * 1.3f);
-			vg.FontFace("icons");
-			vg.FillColor(new Color(255, 255, 255, 32));
-			vg.TextAlign(Alignment.Center | Alignment.Middle);
-			vg.Text(x + w - h * 0.55f, y + h * 0.55f, ICON_CIRCLED_CROSS);
+			vg.FillColor(Utility.FromRGBA(255, 255, 255, 32));
+			vg.Text(fontIcons, ICON_CIRCLED_CROSS, x + w - h * 0.55f, y + h * 0.55f, TextHorizontalAlignment.Center, TextVerticalAlignment.Center);
 		}
 
-		public static void drawDropDown(NvgContext vg, string text, float x, float y, float w, float h)
+		public void drawDropDown(NvgContext vg, string text, float x, float y, float w, float h)
 		{
 			Paint bg;
 			float cornerRadius = 4.0f;
 
-			bg = vg.LinearGradient(x, y, x, y + h, new Color(255, 255, 255, 16), new Color(0, 0, 0, 16));
+			bg = vg.LinearGradient(x, y, x, y + h, Utility.FromRGBA(255, 255, 255, 16), Utility.FromRGBA(0, 0, 0, 16));
 			vg.BeginPath();
 			vg.RoundedRect(x + 1, y + 1, w - 2, h - 2, cornerRadius - 1);
 			vg.FillPaint(bg);
@@ -145,37 +155,28 @@ namespace PerfStat.Samples.Demo
 
 			vg.BeginPath();
 			vg.RoundedRect(x + 0.5f, y + 0.5f, w - 1, h - 1, cornerRadius - 0.5f);
-			vg.StrokeColor(new Color(0, 0, 0, 48));
+			vg.StrokeColor(Utility.FromRGBA(0, 0, 0, 48));
 			vg.Stroke();
 
-			vg.FontSize(20.0f);
-			vg.FontFace("sans");
-			vg.FillColor(new Color(255, 255, 255, 160));
-			vg.TextAlign(Alignment.Left | Alignment.Middle);
-			vg.Text(x + h * 0.3f, y + h * 0.5f, text);
+			vg.FillColor(Utility.FromRGBA(255, 255, 255, 160));
+			vg.Text(fontSans20, text, x + h * 0.3f, y + h * 0.5f, TextHorizontalAlignment.Left, TextVerticalAlignment.Center);
 
-			vg.FontSize(h * 1.3f);
-			vg.FontFace("icons");
-			vg.FillColor(new Color(255, 255, 255, 64));
-			vg.TextAlign(Alignment.Center | Alignment.Middle);
-			vg.Text(x + w - h * 0.5f, y + h * 0.5f, ICON_CHEVRON_RIGHT);
+			var fontIcons = fontSystemIcons.GetFont((int)(h * 1.3f));
+			vg.FillColor(Utility.FromRGBA(255, 255, 255, 64));
+			vg.Text(fontIcons, ICON_CHEVRON_RIGHT, x + w - h * 0.5f, y + h * 0.5f, TextHorizontalAlignment.Center, TextVerticalAlignment.Center);
 		}
 
-		public static void drawLabel(NvgContext vg, string text, float x, float y, float w, float h)
+		public void drawLabel(NvgContext vg, string text, float x, float y, float w, float h)
 		{
-			vg.FontSize(18.0f);
-			vg.FontFace("sans");
-			vg.FillColor(new Color(255, 255, 255, 128));
-
-			vg.TextAlign(Alignment.Left | Alignment.Middle);
-			vg.Text(x, y + h * 0.5f, text);
+			vg.FillColor(Utility.FromRGBA(255, 255, 255, 128));
+			vg.Text(fontSans18, text, x, y + h * 0.5f, TextHorizontalAlignment.Left, TextVerticalAlignment.Center);
 		}
 
 		public static void drawEditBoxBase(NvgContext vg, float x, float y, float w, float h)
 		{
 			Paint bg;
 			// Edit
-			bg = vg.BoxGradient(x + 1, y + 1 + 1.5f, w - 2, h - 2, 3, 4, new Color(255, 255, 255, 32), new Color(32, 32, 32, 32));
+			bg = vg.BoxGradient(x + 1, y + 1 + 1.5f, w - 2, h - 2, 3, 4, Utility.FromRGBA(255, 255, 255, 32), Utility.FromRGBA(32, 32, 32, 32));
 			vg.BeginPath();
 			vg.RoundedRect(x + 1, y + 1, w - 2, h - 2, 4 - 1);
 			vg.FillPaint(bg);
@@ -183,76 +184,57 @@ namespace PerfStat.Samples.Demo
 
 			vg.BeginPath();
 			vg.RoundedRect(x + 0.5f, y + 0.5f, w - 1, h - 1, 4 - 0.5f);
-			vg.StrokeColor(new Color(0, 0, 0, 48));
+			vg.StrokeColor(Utility.FromRGBA(0, 0, 0, 48));
 			vg.Stroke();
 		}
 
-		public static void drawEditBox(NvgContext vg, string text, float x, float y, float w, float h)
+		public void drawEditBox(NvgContext vg, string text, float x, float y, float w, float h)
 		{
-
 			drawEditBoxBase(vg, x, y, w, h);
 
-			vg.FontSize(20.0f);
-			vg.FontFace("sans");
-			vg.FillColor(new Color(255, 255, 255, 64));
-			vg.TextAlign(Alignment.Left | Alignment.Middle);
-			vg.Text(x + h * 0.3f, y + h * 0.5f, text);
+			vg.FillColor(Utility.FromRGBA(255, 255, 255, 64));
+			vg.Text(fontSans20, text, x + h * 0.3f, y + h * 0.5f, TextHorizontalAlignment.Left, TextVerticalAlignment.Center);
 		}
 
-		public static void drawEditBoxNum(NvgContext vg,
-							string text, string units, float x, float y, float w, float h)
+		public void drawEditBoxNum(NvgContext vg, string text, string units, float x, float y, float w, float h)
 		{
-			float uw;
-
 			drawEditBoxBase(vg, x, y, w, h);
 
-			Bounds bounds = new Bounds();
-			uw = vg.TextBounds(0, 0, units, ref bounds);
+			var sz = fontSans18.MeasureString(units);
 
-			vg.FontSize(18.0f);
-			vg.FontFace("sans");
-			vg.FillColor(new Color(255, 255, 255, 64));
-			vg.TextAlign(Alignment.Right | Alignment.Middle);
-			vg.Text(x + w - h * 0.3f, y + h * 0.5f, units);
+			vg.FillColor(Utility.FromRGBA(255, 255, 255, 64));
+			vg.Text(fontSans18, units, x + w - h * 0.3f, y + h * 0.5f, TextHorizontalAlignment.Right, TextVerticalAlignment.Center);
 
-			vg.FontSize(20.0f);
-			vg.FontFace("sans");
-			vg.FillColor(new Color(255, 255, 255, 128));
-			vg.TextAlign(Alignment.Right | Alignment.Middle);
-			vg.Text(x + w - uw - h * 0.5f, y + h * 0.5f, text);
+			vg.FillColor(Utility.FromRGBA(255, 255, 255, 128));
+			vg.Text(fontSans20, text, x + w - sz.X - h * 0.5f, y + h * 0.5f, TextHorizontalAlignment.Right, TextVerticalAlignment.Center);
 		}
 
-		public static void drawCheckBox(NvgContext vg, string text, float x, float y, float w, float h)
+		public void drawCheckBox(NvgContext vg, string text, float x, float y, float w, float h)
 		{
 			Paint bg;
 
-			vg.FontSize(18.0f);
-			vg.FontFace("sans");
-			vg.FillColor(new Color(255, 255, 255, 160));
+			vg.FillColor(Utility.FromRGBA(255, 255, 255, 160));
+			vg.Text(fontSans18, text, x + 28, y + h * 0.5f, TextHorizontalAlignment.Left, TextVerticalAlignment.Center);
 
-			vg.TextAlign(Alignment.Left | Alignment.Middle);
-			vg.Text(x + 28, y + h * 0.5f, text);
-
-			bg = vg.BoxGradient(x + 1, y + (int)(h * 0.5f) - 9 + 1, 18, 18, 3, 3, new Color(0, 0, 0, 32), new Color(0, 0, 0, 92));
+			bg = vg.BoxGradient(x + 1, y + (int)(h * 0.5f) - 9 + 1, 18, 18, 3, 3, Utility.FromRGBA(0, 0, 0, 32), Utility.FromRGBA(0, 0, 0, 92));
 			vg.BeginPath();
 			vg.RoundedRect(x + 1, y + (int)(h * 0.5f) - 9, 18, 18, 3);
 			vg.FillPaint(bg);
 			vg.Fill();
 
-			vg.FontSize(40);
-			vg.FontFace("icons");
-			vg.FillColor(new Color(255, 255, 255, 128));
-			vg.TextAlign(Alignment.Center | Alignment.Middle);
-			vg.Text(x + 9 + 2, y + h * 0.5f, ICON_CHECK);
+			var fontIcons = fontSystemIcons.GetFont(40);
+			vg.FillColor(Utility.FromRGBA(255, 255, 255, 128));
+			vg.Text(fontIcons, ICON_CHECK, x + 9 + 2, y + h * 0.5f, TextHorizontalAlignment.Center, TextVerticalAlignment.Center);
 		}
 
-		public static void drawButton(NvgContext vg, string preicon, string text, float x, float y, float w, float h, Color col)
+		public void drawButton(NvgContext vg, string preicon, string text, float x, float y, float w, float h, Color col)
 		{
 			Paint bg;
 			float cornerRadius = 4.0f;
 			float tw = 0, iw = 0;
 
-			bg = vg.LinearGradient(x, y, x, y + h, new Color(255, 255, 255, isBlack(col) ? 16 : 32), new Color(0, 0, 0, isBlack(col) ? 16 : 32));
+			bg = vg.LinearGradient(x, y, x, y + h, Utility.FromRGBA(255, 255, 255, isBlack(col) ? (byte)16 : (byte)32), 
+				Utility.FromRGBA(0, 0, 0, isBlack(col) ? (byte)16 : (byte)32));
 			vg.BeginPath();
 			vg.RoundedRect(x + 1, y + 1, w - 2, h - 2, cornerRadius - 1);
 			if (!isBlack(col))
@@ -265,37 +247,26 @@ namespace PerfStat.Samples.Demo
 
 			vg.BeginPath();
 			vg.RoundedRect(x + 0.5f, y + 0.5f, w - 1, h - 1, cornerRadius - 0.5f);
-			vg.StrokeColor(new Color(0, 0, 0, 48));
+			vg.StrokeColor(Utility.FromRGBA(0, 0, 0, 48));
 			vg.Stroke();
 
-			vg.FontSize(20.0f);
-			vg.FontFace("sans-bold");
-			Bounds bounds = new Bounds();
-			tw = vg.TextBounds(0, 0, text, ref bounds);
+			var sz = fontBold20.MeasureString(text);
+			tw = sz.X;
 			if (!string.IsNullOrEmpty(preicon))
 			{
-				vg.FontSize(h * 1.3f);
-				vg.FontFace("icons");
-				iw = vg.TextBounds(0, 0, preicon, ref bounds);
+				var fontIcons = fontSystemIcons.GetFont((int)(h * 1.3f));
+				sz = fontIcons.MeasureString(preicon);
+				iw = sz.X;
 				iw += h * 0.15f;
+
+				vg.FillColor(Utility.FromRGBA(255, 255, 255, 96));
+				vg.Text(fontIcons, preicon, x + w * 0.5f - tw * 0.5f - iw * 0.75f, y + h * 0.5f, TextHorizontalAlignment.Left, TextVerticalAlignment.Center);
 			}
 
-			if (!string.IsNullOrEmpty(preicon))
-			{
-				vg.FontSize(h * 1.3f);
-				vg.FontFace("icons");
-				vg.FillColor(new Color(255, 255, 255, 96));
-				vg.TextAlign(Alignment.Left | Alignment.Middle);
-				vg.Text(x + w * 0.5f - tw * 0.5f - iw * 0.75f, y + h * 0.5f, preicon);
-			}
-
-			vg.FontSize(20.0f);
-			vg.FontFace("sans-bold");
-			vg.TextAlign(Alignment.Left | Alignment.Middle);
-			vg.FillColor(new Color(0, 0, 0, 160));
-			vg.Text(x + w * 0.5f - tw * 0.5f + iw * 0.25f, y + h * 0.5f - 1, text);
-			vg.FillColor(new Color(255, 255, 255, 160));
-			vg.Text(x + w * 0.5f - tw * 0.5f + iw * 0.25f, y + h * 0.5f, text);
+			vg.FillColor(Utility.FromRGBA(0, 0, 0, 160));
+			vg.Text(fontBold20, text, x + w * 0.5f - tw * 0.5f + iw * 0.25f, y + h * 0.5f - 1, TextHorizontalAlignment.Left, TextVerticalAlignment.Center);
+			vg.FillColor(Utility.FromRGBA(255, 255, 255, 160));
+			vg.Text(fontBold20, text, x + w * 0.5f - tw * 0.5f + iw * 0.25f, y + h * 0.5f, TextHorizontalAlignment.Left, TextVerticalAlignment.Center);
 		}
 
 		public static void drawSlider(NvgContext vg, float pos, float x, float y, float w, float h)
@@ -304,18 +275,18 @@ namespace PerfStat.Samples.Demo
 			float cy = y + (int)(h * 0.5f);
 			float kr = (int)(h * 0.25f);
 
-			vg.Save();
+			vg.SaveState();
 			//	ClearState(vg);
 
 			// Slot
-			bg = vg.BoxGradient(x, cy - 2 + 1, w, 4, 2, 2, new Color(0, 0, 0, 32), new Color(0, 0, 0, 128));
+			bg = vg.BoxGradient(x, cy - 2 + 1, w, 4, 2, 2, Utility.FromRGBA(0, 0, 0, 32), Utility.FromRGBA(0, 0, 0, 128));
 			vg.BeginPath();
 			vg.RoundedRect(x, cy - 2, w, 4, 2);
 			vg.FillPaint(bg);
 			vg.Fill();
 
 			// Knob Shadow
-			bg = vg.RadialGradient(x + (int)(pos * w), cy + 1, kr - 3, kr + 3, new Color(0, 0, 0, 64), new Color(0, 0, 0, 0));
+			bg = vg.RadialGradient(x + (int)(pos * w), cy + 1, kr - 3, kr + 3, Utility.FromRGBA(0, 0, 0, 64), Utility.FromRGBA(0, 0, 0, 0));
 			vg.BeginPath();
 			vg.Rect(x + (int)(pos * w) - kr - 5, cy - kr - 5, kr * 2 + 5 + 5, kr * 2 + 5 + 5 + 3);
 			vg.Circle(x + (int)(pos * w), cy, kr);
@@ -324,20 +295,20 @@ namespace PerfStat.Samples.Demo
 			vg.Fill();
 
 			// Knob
-			knob = vg.LinearGradient(x, cy - kr, x, cy + kr, new Color(255, 255, 255, 16), new Color(0, 0, 0, 16));
+			knob = vg.LinearGradient(x, cy - kr, x, cy + kr, Utility.FromRGBA(255, 255, 255, 16), Utility.FromRGBA(0, 0, 0, 16));
 			vg.BeginPath();
 			vg.Circle(x + (int)(pos * w), cy, kr - 1);
-			vg.FillColor(new Color(40, 43, 48, 255));
+			vg.FillColor(Utility.FromRGBA(40, 43, 48, 255));
 			vg.Fill();
 			vg.FillPaint(knob);
 			vg.Fill();
 
 			vg.BeginPath();
 			vg.Circle(x + (int)(pos * w), cy, kr - 0.5f);
-			vg.StrokeColor(new Color(0, 0, 0, 92));
+			vg.StrokeColor(Utility.FromRGBA(0, 0, 0, 92));
 			vg.Stroke();
 
-			vg.Restore();
+			vg.RestoreState();
 		}
 
 		public static void drawEyes(NvgContext vg, float x, float y, float w, float h, float mx, float my, float t)
@@ -353,14 +324,14 @@ namespace PerfStat.Samples.Demo
 			float br = (ex < ey ? ex : ey) * 0.5f;
 			float blink = 1 - (float)(Math.Pow(Math.Sin(t * 0.5f), 200) * 0.8f);
 
-			bg = vg.LinearGradient(x, y + h * 0.5f, x + w * 0.1f, y + h, new Color(0, 0, 0, 32), new Color(0, 0, 0, 16));
+			bg = vg.LinearGradient(x, y + h * 0.5f, x + w * 0.1f, y + h, Utility.FromRGBA(0, 0, 0, 32), Utility.FromRGBA(0, 0, 0, 16));
 			vg.BeginPath();
 			vg.Ellipse(lx + 3.0f, ly + 16.0f, ex, ey);
 			vg.Ellipse(rx + 3.0f, ry + 16.0f, ex, ey);
 			vg.FillPaint(bg);
 			vg.Fill();
 
-			bg = vg.LinearGradient(x, y + h * 0.25f, x + w * 0.1f, y + h, new Color(220, 220, 220, 255), new Color(128, 128, 128, 255));
+			bg = vg.LinearGradient(x, y + h * 0.25f, x + w * 0.1f, y + h, Utility.FromRGBA(220, 220, 220, 255), Utility.FromRGBA(128, 128, 128, 255));
 			vg.BeginPath();
 			vg.Ellipse(lx, ly, ex, ey);
 			vg.Ellipse(rx, ry, ex, ey);
@@ -379,7 +350,7 @@ namespace PerfStat.Samples.Demo
 			dy *= ey * 0.5f;
 			vg.BeginPath();
 			vg.Ellipse(lx + dx, ly + dy + ey * 0.25f * (1 - blink), br, br * blink);
-			vg.FillColor(new Color(32, 32, 32, 255));
+			vg.FillColor(Utility.FromRGBA(32, 32, 32, 255));
 			vg.Fill();
 
 			dx = (mx - rx) / (ex * 10);
@@ -394,16 +365,16 @@ namespace PerfStat.Samples.Demo
 			dy *= ey * 0.5f;
 			vg.BeginPath();
 			vg.Ellipse(rx + dx, ry + dy + ey * 0.25f * (1 - blink), br, br * blink);
-			vg.FillColor(new Color(32, 32, 32, 255));
+			vg.FillColor(Utility.FromRGBA(32, 32, 32, 255));
 			vg.Fill();
 
-			gloss = vg.RadialGradient(lx - ex * 0.25f, ly - ey * 0.5f, ex * 0.1f, ex * 0.75f, new Color(255, 255, 255, 128), new Color(255, 255, 255, 0));
+			gloss = vg.RadialGradient(lx - ex * 0.25f, ly - ey * 0.5f, ex * 0.1f, ex * 0.75f, Utility.FromRGBA(255, 255, 255, 128), Utility.FromRGBA(255, 255, 255, 0));
 			vg.BeginPath();
 			vg.Ellipse(lx, ly, ex, ey);
 			vg.FillPaint(gloss);
 			vg.Fill();
 
-			gloss = vg.RadialGradient(rx - ex * 0.25f, ry - ey * 0.5f, ex * 0.1f, ex * 0.75f, new Color(255, 255, 255, 128), new Color(255, 255, 255, 0));
+			gloss = vg.RadialGradient(rx - ex * 0.25f, ry - ey * 0.5f, ex * 0.1f, ex * 0.75f, Utility.FromRGBA(255, 255, 255, 128), Utility.FromRGBA(255, 255, 255, 0));
 			vg.BeginPath();
 			vg.Ellipse(rx, ry, ex, ey);
 			vg.FillPaint(gloss);
@@ -432,7 +403,7 @@ namespace PerfStat.Samples.Demo
 			}
 
 			// Graph background
-			bg = vg.LinearGradient(x, y, x, y + h, new Color(0, 160, 192, 0), new Color(0, 160, 192, 64));
+			bg = vg.LinearGradient(x, y, x, y + h, Utility.FromRGBA(0, 160, 192, 0), Utility.FromRGBA(0, 160, 192, 64));
 			vg.BeginPath();
 			vg.MoveTo(sx[0], sy[0]);
 			for (i = 1; i < 6; i++)
@@ -447,7 +418,7 @@ namespace PerfStat.Samples.Demo
 			vg.MoveTo(sx[0], sy[0] + 2);
 			for (i = 1; i < 6; i++)
 				vg.BezierTo(sx[i - 1] + dx * 0.5f, sy[i - 1] + 2, sx[i] - dx * 0.5f, sy[i] + 2, sx[i], sy[i] + 2);
-			vg.StrokeColor(new Color(0, 0, 0, 32));
+			vg.StrokeColor(Utility.FromRGBA(0, 0, 0, 32));
 			vg.StrokeWidth(3.0f);
 			vg.Stroke();
 
@@ -455,14 +426,14 @@ namespace PerfStat.Samples.Demo
 			vg.MoveTo(sx[0], sy[0]);
 			for (i = 1; i < 6; i++)
 				vg.BezierTo(sx[i - 1] + dx * 0.5f, sy[i - 1], sx[i] - dx * 0.5f, sy[i], sx[i], sy[i]);
-			vg.StrokeColor(new Color(0, 160, 192, 255));
+			vg.StrokeColor(Utility.FromRGBA(0, 160, 192, 255));
 			vg.StrokeWidth(3.0f);
 			vg.Stroke();
 
 			// Graph sample pos
 			for (i = 0; i < 6; i++)
 			{
-				bg = vg.RadialGradient(sx[i], sy[i] + 2, 3.0f, 8.0f, new Color(0, 0, 0, 32), new Color(0, 0, 0, 0));
+				bg = vg.RadialGradient(sx[i], sy[i] + 2, 3.0f, 8.0f, Utility.FromRGBA(0, 0, 0, 32), Utility.FromRGBA(0, 0, 0, 0));
 				vg.BeginPath();
 				vg.Rect(sx[i] - 10, sy[i] - 10 + 2, 20, 20);
 				vg.FillPaint(bg);
@@ -472,12 +443,12 @@ namespace PerfStat.Samples.Demo
 			vg.BeginPath();
 			for (i = 0; i < 6; i++)
 				vg.Circle(sx[i], sy[i], 4.0f);
-			vg.FillColor(new Color(0, 160, 192, 255));
+			vg.FillColor(Utility.FromRGBA(0, 160, 192, 255));
 			vg.Fill();
 			vg.BeginPath();
 			for (i = 0; i < 6; i++)
 				vg.Circle(sx[i], sy[i], 2.0f);
-			vg.FillColor(new Color(220, 220, 220, 255));
+			vg.FillColor(Utility.FromRGBA(220, 220, 220, 255));
 			vg.Fill();
 
 			vg.StrokeWidth(1.0f);
@@ -492,7 +463,7 @@ namespace PerfStat.Samples.Demo
 			float ax, ay, bx, by;
 			Paint paint;
 
-			vg.Save();
+			vg.SaveState();
 
 			vg.BeginPath();
 			vg.Arc(cx, cy, r0, a0, a1, Winding.ClockWise);
@@ -502,14 +473,14 @@ namespace PerfStat.Samples.Demo
 			ay = cy + (float)Math.Sin(a0) * (r0 + r1) * 0.5f;
 			bx = cx + (float)Math.Cos(a1) * (r0 + r1) * 0.5f;
 			by = cy + (float)Math.Sin(a1) * (r0 + r1) * 0.5f;
-			paint = vg.LinearGradient(ax, ay, bx, by, new Color(0, 0, 0, 0), new Color(0, 0, 0, 128));
+			paint = vg.LinearGradient(ax, ay, bx, by, Utility.FromRGBA(0, 0, 0, 0), Utility.FromRGBA(0, 0, 0, 128));
 			vg.FillPaint(paint);
 			vg.Fill();
 
-			vg.Restore();
+			vg.RestoreState();
 		}
 
-		public static void drawThumbnails(NvgContext vg, float x, float y, float w, float h, int[] images, float t)
+		public static void drawThumbnails(NvgContext vg, float x, float y, float w, float h, Texture2D[] images, float t)
 		{
 			float cornerRadius = 3.0f;
 			Paint shadowPaint, imgPaint, fadePaint;
@@ -523,11 +494,11 @@ namespace PerfStat.Samples.Demo
 			float u2 = (1 - (float)Math.Cos(t * 0.2f)) * 0.5f;
 			float scrollh, dv;
 
-			vg.Save();
+			vg.SaveState();
 			//	ClearState(vg);
 
 			// Drop shadow
-			shadowPaint = vg.BoxGradient(x, y + 4, w, h, cornerRadius * 2, 20, new Color(0, 0, 0, 128), new Color(0, 0, 0, 0));
+			shadowPaint = vg.BoxGradient(x, y + 4, w, h, cornerRadius * 2, 20, Utility.FromRGBA(0, 0, 0, 128), Utility.FromRGBA(0, 0, 0, 0));
 			vg.BeginPath();
 			vg.Rect(x - 10, y - 10, w + 20, h + 30);
 			vg.RoundedRect(x, y, w, h, cornerRadius);
@@ -541,14 +512,14 @@ namespace PerfStat.Samples.Demo
 			vg.MoveTo(x - 10, y + arry);
 			vg.LineTo(x + 1, y + arry - 11);
 			vg.LineTo(x + 1, y + arry + 11);
-			vg.FillColor(new Color(200, 200, 200, 255));
+			vg.FillColor(Utility.FromRGBA(200, 200, 200, 255));
 			vg.Fill();
 
-			vg.Save();
+			vg.SaveState();
 			vg.Scissor(x, y, w, h);
 			vg.Translate(0, -(stackh - h) * u);
 
-			dv = 1.0f / (float)(images.Length - 1);
+			dv = 1.0f / (images.Length - 1);
 
 			for (i = 0; i < images.Length; i++)
 			{
@@ -557,18 +528,27 @@ namespace PerfStat.Samples.Demo
 				ty = y + 10;
 				tx += (i % 2) * (thumb + 10);
 				ty += (i / 2) * (thumb + 10);
-				vg.ImageSize(images[i], out imgw, out imgh);
+
+#if MONOGAME || FNA || STRIDE
+				imgw = images[i].Width;
+				imgh = images[i].Height;
+#else
+				var sz = vg.TextureManager.GetTextureSize(images[i]);
+				imgw = sz.X;
+				imgh = sz.Y;
+#endif
+
 				if (imgw < imgh)
 				{
 					iw = thumb;
-					ih = iw * (float)imgh / (float)imgw;
+					ih = iw * imgh / imgw;
 					ix = 0;
 					iy = -(ih - thumb) * 0.5f;
 				}
 				else
 				{
 					ih = thumb;
-					iw = ih * (float)imgw / (float)imgh;
+					iw = ih * imgw / imgh;
 					ix = -(iw - thumb) * 0.5f;
 					iy = 0;
 				}
@@ -585,7 +565,7 @@ namespace PerfStat.Samples.Demo
 				vg.FillPaint(imgPaint);
 				vg.Fill();
 
-				shadowPaint = vg.BoxGradient(tx - 1, ty, thumb + 2, thumb + 2, 5, 3, new Color(0, 0, 0, 128), new Color(0, 0, 0, 0));
+				shadowPaint = vg.BoxGradient(tx - 1, ty, thumb + 2, thumb + 2, 5, 3, Utility.FromRGBA(0, 0, 0, 128), Utility.FromRGBA(0, 0, 0, 0));
 				vg.BeginPath();
 				vg.Rect(tx - 5, ty - 5, thumb + 10, thumb + 10);
 				vg.RoundedRect(tx, ty, thumb, thumb, 6);
@@ -596,41 +576,41 @@ namespace PerfStat.Samples.Demo
 				vg.BeginPath();
 				vg.RoundedRect(tx + 0.5f, ty + 0.5f, thumb - 1, thumb - 1, 4 - 0.5f);
 				vg.StrokeWidth(1.0f);
-				vg.StrokeColor(new Color(255, 255, 255, 192));
+				vg.StrokeColor(Utility.FromRGBA(255, 255, 255, 192));
 				vg.Stroke();
 			}
-			vg.Restore();
+			vg.RestoreState();
 
 			// Hide fades
-			fadePaint = vg.LinearGradient(x, y, x, y + 6, new Color(200, 200, 200, 255), new Color(200, 200, 200, 0));
+			fadePaint = vg.LinearGradient(x, y, x, y + 6, Utility.FromRGBA(200, 200, 200, 255), Utility.FromRGBA(200, 200, 200, 0));
 			vg.BeginPath();
 			vg.Rect(x + 4, y, w - 8, 6);
 			vg.FillPaint(fadePaint);
 			vg.Fill();
 
-			fadePaint = vg.LinearGradient(x, y + h, x, y + h - 6, new Color(200, 200, 200, 255), new Color(200, 200, 200, 0));
+			fadePaint = vg.LinearGradient(x, y + h, x, y + h - 6, Utility.FromRGBA(200, 200, 200, 255), Utility.FromRGBA(200, 200, 200, 0));
 			vg.BeginPath();
 			vg.Rect(x + 4, y + h - 6, w - 8, 6);
 			vg.FillPaint(fadePaint);
 			vg.Fill();
 
 			// Scroll bar
-			shadowPaint = vg.BoxGradient(x + w - 12 + 1, y + 4 + 1, 8, h - 8, 3, 4, new Color(0, 0, 0, 32), new Color(0, 0, 0, 92));
+			shadowPaint = vg.BoxGradient(x + w - 12 + 1, y + 4 + 1, 8, h - 8, 3, 4, Utility.FromRGBA(0, 0, 0, 32), Utility.FromRGBA(0, 0, 0, 92));
 			vg.BeginPath();
 			vg.RoundedRect(x + w - 12, y + 4, 8, h - 8, 3);
 			vg.FillPaint(shadowPaint);
-			//	vg.FillColor(new Color(255,0,0,128));
+			//	vg.FillColor(GLUtility.FromRGBA(255,0,0,128));
 			vg.Fill();
 
 			scrollh = (h / stackh) * (h - 8);
-			shadowPaint = vg.BoxGradient(x + w - 12 - 1, y + 4 + (h - 8 - scrollh) * u - 1, 8, scrollh, 3, 4, new Color(220, 220, 220, 255), new Color(128, 128, 128, 255));
+			shadowPaint = vg.BoxGradient(x + w - 12 - 1, y + 4 + (h - 8 - scrollh) * u - 1, 8, scrollh, 3, 4, Utility.FromRGBA(220, 220, 220, 255), Utility.FromRGBA(128, 128, 128, 255));
 			vg.BeginPath();
 			vg.RoundedRect(x + w - 12 + 1, y + 4 + 1 + (h - 8 - scrollh) * u, 8 - 2, scrollh - 2, 2);
 			vg.FillPaint(shadowPaint);
-			//	vg.FillColor(new Color(0,0,0,128));
+			//	vg.FillColor(GLUtility.FromRGBA(0,0,0,128));
 			vg.Fill();
 
-			vg.Restore();
+			vg.RestoreState();
 		}
 
 		public static void drawColorwheel(NvgContext vg, float x, float y, float w, float h, float t)
@@ -640,11 +620,11 @@ namespace PerfStat.Samples.Demo
 			float hue = (float)Math.Sin(t * 0.12f);
 			Paint paint;
 
-			vg.Save();
+			vg.SaveState();
 
 			/*	vg.BeginPath();
 				vg.Rect(x,y,w,h);
-				vg.FillColor(new Color(255,0,0,128));
+				vg.FillColor(GLUtility.FromRGBA(255,0,0,128));
 				vg.Fill();*/
 
 			cx = x + w * 0.5f;
@@ -665,7 +645,7 @@ namespace PerfStat.Samples.Demo
 				ay = cy + (float)Math.Sin(a0) * (r0 + r1) * 0.5f;
 				bx = cx + (float)Math.Cos(a1) * (r0 + r1) * 0.5f;
 				by = cy + (float)Math.Sin(a1) * (r0 + r1) * 0.5f;
-				paint = vg.LinearGradient(ax, ay, bx, by, NvgUtility.HSLA(a0 / ((float)Math.PI * 2), 1.0f, 0.55f, 255), NvgUtility.HSLA(a1 / ((float)Math.PI * 2), 1.0f, 0.55f, 255));
+				paint = vg.LinearGradient(ax, ay, bx, by, Utility.HSLA(a0 / ((float)Math.PI * 2), 1.0f, 0.55f, 255), Utility.HSLA(a1 / ((float)Math.PI * 2), 1.0f, 0.55f, 255));
 				vg.FillPaint(paint);
 				vg.Fill();
 			}
@@ -673,12 +653,12 @@ namespace PerfStat.Samples.Demo
 			vg.BeginPath();
 			vg.Circle(cx, cy, r0 - 0.5f);
 			vg.Circle(cx, cy, r1 + 0.5f);
-			vg.StrokeColor(new Color(0, 0, 0, 64));
+			vg.StrokeColor(Utility.FromRGBA(0, 0, 0, 64));
 			vg.StrokeWidth(1.0f);
 			vg.Stroke();
 
 			// Selector
-			vg.Save();
+			vg.SaveState();
 			vg.Translate(cx, cy);
 			vg.Rotate(hue * (float)Math.PI * 2);
 
@@ -686,10 +666,10 @@ namespace PerfStat.Samples.Demo
 			vg.StrokeWidth(2.0f);
 			vg.BeginPath();
 			vg.Rect(r0 - 1, -3, r1 - r0 + 2, 6);
-			vg.StrokeColor(new Color(255, 255, 255, 192));
+			vg.StrokeColor(Utility.FromRGBA(255, 255, 255, 192));
 			vg.Stroke();
 
-			paint = vg.BoxGradient(r0 - 3, -5, r1 - r0 + 6, 10, 2, 4, new Color(0, 0, 0, 128), new Color(0, 0, 0, 0));
+			paint = vg.BoxGradient(r0 - 3, -5, r1 - r0 + 6, 10, 2, 4, Utility.FromRGBA(0, 0, 0, 128), Utility.FromRGBA(0, 0, 0, 0));
 			vg.BeginPath();
 			vg.Rect(r0 - 2 - 10, -4 - 10, r1 - r0 + 4 + 20, 8 + 20);
 			vg.Rect(r0 - 2, -4, r1 - r0 + 4, 8);
@@ -708,13 +688,13 @@ namespace PerfStat.Samples.Demo
 			vg.LineTo(ax, ay);
 			vg.LineTo(bx, by);
 			vg.ClosePath();
-			paint = vg.LinearGradient(r, 0, ax, ay, NvgUtility.HSLA(hue, 1.0f, 0.5f, 255), new Color(255, 255, 255, 255));
+			paint = vg.LinearGradient(r, 0, ax, ay, Utility.HSLA(hue, 1.0f, 0.5f, 255), Utility.FromRGBA(255, 255, 255, 255));
 			vg.FillPaint(paint);
 			vg.Fill();
-			paint = vg.LinearGradient((r + ax) * 0.5f, (0 + ay) * 0.5f, bx, by, new Color(0, 0, 0, 0), new Color(0, 0, 0, 255));
+			paint = vg.LinearGradient((r + ax) * 0.5f, (0 + ay) * 0.5f, bx, by, Utility.FromRGBA(0, 0, 0, 0), Utility.FromRGBA(0, 0, 0, 255));
 			vg.FillPaint(paint);
 			vg.Fill();
-			vg.StrokeColor(new Color(0, 0, 0, 64));
+			vg.StrokeColor(Utility.FromRGBA(0, 0, 0, 64));
 			vg.Stroke();
 
 			// Select circle on triangle
@@ -723,10 +703,10 @@ namespace PerfStat.Samples.Demo
 			vg.StrokeWidth(2.0f);
 			vg.BeginPath();
 			vg.Circle(ax, ay, 5);
-			vg.StrokeColor(new Color(255, 255, 255, 192));
+			vg.StrokeColor(Utility.FromRGBA(255, 255, 255, 192));
 			vg.Stroke();
 
-			paint = vg.RadialGradient(ax, ay, 7, 9, new Color(0, 0, 0, 64), new Color(0, 0, 0, 0));
+			paint = vg.RadialGradient(ax, ay, 7, 9, Utility.FromRGBA(0, 0, 0, 64), Utility.FromRGBA(0, 0, 0, 0));
 			vg.BeginPath();
 			vg.Rect(ax - 20, ay - 20, 40, 40);
 			vg.Circle(ax, ay, 7);
@@ -734,9 +714,9 @@ namespace PerfStat.Samples.Demo
 			vg.FillPaint(paint);
 			vg.Fill();
 
-			vg.Restore();
+			vg.RestoreState();
 
-			vg.Restore();
+			vg.RestoreState();
 		}
 
 		public static void drawLines(NvgContext vg, float x, float y, float w, float h, float t)
@@ -748,7 +728,7 @@ namespace PerfStat.Samples.Demo
 			LineCap[] joins = new LineCap[] { LineCap.Miter, LineCap.Round, LineCap.Bevel };
 			LineCap[] caps = new LineCap[] { LineCap.Butt, LineCap.Round, LineCap.Square };
 
-			vg.Save();
+			vg.SaveState();
 			pts[0] = -s * 0.25f + (float)Math.Cos(t * 0.3f) * s * 0.5f;
 			pts[1] = (float)Math.Sin(t * 0.3f) * s * 0.5f;
 			pts[2] = -s * 0.25f;
@@ -769,7 +749,7 @@ namespace PerfStat.Samples.Demo
 					vg.LineJoin(joins[j]);
 
 					vg.StrokeWidth(s * 0.3f);
-					vg.StrokeColor(new Color(0, 0, 0, 160));
+					vg.StrokeColor(Utility.FromRGBA(0, 0, 0, 160));
 					vg.BeginPath();
 					vg.MoveTo(fx + pts[0], fy + pts[1]);
 					vg.LineTo(fx + pts[2], fy + pts[3]);
@@ -781,7 +761,7 @@ namespace PerfStat.Samples.Demo
 					vg.LineJoin(LineCap.Bevel);
 
 					vg.StrokeWidth(1.0f);
-					vg.StrokeColor(new Color(0, 192, 255, 255));
+					vg.StrokeColor(Utility.FromRGBA(0, 192, 255, 255));
 					vg.BeginPath();
 					vg.MoveTo(fx + pts[0], fy + pts[1]);
 					vg.LineTo(fx + pts[2], fy + pts[3]);
@@ -791,194 +771,27 @@ namespace PerfStat.Samples.Demo
 				}
 			}
 
-			vg.Restore();
+			vg.RestoreState();
 		}
 
-		private static int LoadFont(NvgContext vg, string name, string path)
+		private static FontSystem LoadFont(string path)
 		{
-			byte[] data;
-			var ms = new MemoryStream();
-			using (var stream = TitleContainer.OpenStream(path))
+			var result = new FontSystem();
+			using (var stream = File.OpenRead(path))
 			{
-				stream.CopyTo(ms);
-
-				data = ms.ToArray();
+				result.AddFont(stream);
 			}
 
-			return vg.CreateFontMem(name, data);
-		}
-
-		public int loadDemoData(GraphicsDevice device, NvgContext vg)
-		{
-			int i;
-
-			if (vg == null)
-				return -1;
-
-			for (i = 0; i < 12; i++)
-			{
-				var path = "Assets/images/image" + (i + 1).ToString() + ".jpg";
-
-				int width, height;
-				byte[] data;
-				using (var stream = File.OpenRead(path))
-				{
-					var texture = Texture2D.FromStream(device, stream);
-
-					width = texture.Width;
-					height = texture.Height;
-					data = new byte[texture.Width * texture.Height * 4];
-					texture.GetData(data);
-				}
-
-				images[i] = vg.CreateImageRGBA(width, height, 0, data);
-			}
-
-			fontIcons = LoadFont(vg, "icons", "Assets/entypo.ttf");
-			fontNormal = LoadFont(vg, "sans", "Assets/Roboto-Regular.ttf");
-			fontBold = LoadFont(vg, "sans-bold", "Assets/Roboto-Bold.ttf");
-
-			return 0;
-		}
-
-		public static void drawParagraph(NvgContext vg, float x, float y, float width, float height, float mx, float my)
-		{
-			TextRow[] rows = new TextRow[3];
-			GlyphPosition[] glyphs = new GlyphPosition[100];
-			string text = "This is longer chunk of text.\n  \n  Would have used lorem ipsum but she    was busy jumping over the lazy dog with the fox and all the men who came to the aid of the party.";
-			StringSegment start;
-			int nrows, i, nglyphs, j, lnum = 0;
-			float lineh;
-			float caretx, px;
-			Bounds bounds = new Bounds();
-			float a;
-			float gx = 0, gy = 0;
-			int gutter = 0;
-
-			for (i = 0; i < rows.Length; ++i)
-			{
-				rows[i] = new TextRow();
-			}
-
-			vg.Save();
-
-			vg.FontSize(18.0f);
-			vg.FontFace("sans");
-			vg.TextAlign(Alignment.Left | Alignment.Top);
-
-			float ascender, descender;
-			vg.TextMetrics(out ascender, out descender, out lineh);
-
-			// The text break API can be used to fill a large buffer of rows,
-			// or to iterate over the text just few lines (or just one) at a time.
-			// The "next" variable of the last returned item tells where to continue.
-			start = text;
-			while (true)
-			{
-				nrows = vg.TextBreakLines(start, width, rows, out start);
-
-				if (nrows <= 0)
-				{
-					break;
-				}
-				for (i = 0; i < nrows; i++)
-				{
-					TextRow row = rows[i];
-					var hit = mx > x && mx < (x + width) && my >= y && my < (y + lineh);
-
-					vg.BeginPath();
-					vg.FillColor(new Color(255, 255, 255, hit ? 64 : 16));
-					vg.Rect(x, y, row.Width, lineh);
-					vg.Fill();
-
-					vg.FillColor(new Color(255, 255, 255, 255));
-					vg.Text(x, y, row.Str);
-
-					if (hit)
-					{
-						caretx = (mx < x + row.Width / 2) ? x : x + row.Width;
-						px = x;
-						nglyphs = vg.TextGlyphPositions(x, y, row.Str, glyphs);
-						for (j = 0; j < nglyphs; j++)
-						{
-							float x0 = glyphs[j].X;
-							float x1 = (j + 1 < nglyphs) ? glyphs[j + 1].X : x + row.Width;
-							float gx2 = x0 * 0.3f + x1 * 0.7f;
-							if (mx >= px && mx < gx2)
-								caretx = glyphs[j].X;
-							px = gx2;
-						}
-						vg.BeginPath();
-						vg.FillColor(new Color(255, 192, 0, 255));
-						vg.Rect(caretx, y, 1, lineh);
-						vg.Fill();
-
-						gutter = lnum + 1;
-						gx = x - 10;
-						gy = y + lineh / 2;
-					}
-					lnum++;
-					y += lineh;
-				}
-			}
-
-			if (gutter > 0)
-			{
-				string txt = gutter.ToString();
-				vg.FontSize(13.0f);
-				vg.TextAlign(Alignment.Right | Alignment.Middle);
-
-				vg.TextBounds(gx, gy, txt, ref bounds);
-
-				vg.BeginPath();
-				vg.FillColor(new Color(255, 192, 0, 255));
-				vg.RoundedRect((int)bounds.b1 - 4, (int)bounds.b2 - 2,
-					(int)(bounds.b3 - bounds.b1) + 8,
-					(int)(bounds.b4 - bounds.b2) + 4,
-					((int)(bounds.b4 - bounds.b2) + 4) / 2 - 1);
-				vg.Fill();
-
-				vg.FillColor(new Color(32, 32, 32, 255));
-				vg.Text(gx, gy, txt);
-			}
-
-			y += 20.0f;
-
-			vg.FontSize(13.0f);
-			vg.TextAlign(Alignment.Left | Alignment.Top);
-			vg.TextLineHeight(1.2f);
-
-			vg.TextBoxBounds(x, y, 150, "Hover your mouse over the text to see calculated caret position.", ref bounds);
-
-			// Fade the tooltip out when close to it.
-			gx = (float)Math.Abs((mx - (bounds.b1 + bounds.b3) * 0.5f) / (bounds.b1 - bounds.b3));
-			gy = (float)Math.Abs((my - (bounds.b2 + bounds.b4) * 0.5f) / (bounds.b2 - bounds.b4));
-			a = maxf(gx, gy) - 0.5f;
-			a = clampf(a, 0, 1);
-			vg.GlobalAlpha(a);
-
-			vg.BeginPath();
-			vg.FillColor(new Color(220, 220, 220, 255));
-			vg.RoundedRect(bounds.b1 - 2, bounds.b2 - 2, (int)(bounds.b3 - bounds.b1) + 4, (int)(bounds.b4 - bounds.b2) + 4, 3);
-			px = (int)((bounds.b3 + bounds.b1) / 2);
-			vg.MoveTo(px, bounds.b2 - 10);
-			vg.LineTo(px + 7, bounds.b2 + 1);
-			vg.LineTo(px - 7, bounds.b2 + 1);
-			vg.Fill();
-
-			vg.FillColor(new Color(0, 0, 0, 220));
-			vg.TextBox(x, y, 150, "Hover your mouse over the text to see calculated caret position.");
-
-			vg.Restore();
+			return result;
 		}
 
 		public static void drawWidths(NvgContext vg, float x, float y, float width)
 		{
 			int i;
 
-			vg.Save();
+			vg.SaveState();
 
-			vg.StrokeColor(new Color(0, 0, 0, 255));
+			vg.StrokeColor(Utility.FromRGBA(0, 0, 0, 255));
 
 			for (i = 0; i < 20; i++)
 			{
@@ -991,7 +804,7 @@ namespace PerfStat.Samples.Demo
 				y += 10;
 			}
 
-			vg.Restore();
+			vg.RestoreState();
 		}
 
 		public static void drawCaps(NvgContext vg, float x, float y, float width)
@@ -1000,42 +813,42 @@ namespace PerfStat.Samples.Demo
 			LineCap[] caps = new[] { LineCap.Butt, LineCap.Round, LineCap.Square };
 			float lineWidth = 8.0f;
 
-			vg.Save();
+			vg.SaveState();
 
 			vg.BeginPath();
 			vg.Rect(x - lineWidth / 2, y, width + lineWidth, 40);
-			vg.FillColor(new Color(255, 255, 255, 32));
+			vg.FillColor(Utility.FromRGBA(255, 255, 255, 32));
 			vg.Fill();
 
 			vg.BeginPath();
 			vg.Rect(x, y, width, 40);
-			vg.FillColor(new Color(255, 255, 255, 32));
+			vg.FillColor(Utility.FromRGBA(255, 255, 255, 32));
 			vg.Fill();
 
 			vg.StrokeWidth(lineWidth);
 			for (i = 0; i < 3; i++)
 			{
 				vg.LineCap(caps[i]);
-				vg.StrokeColor(new Color(0, 0, 0, 255));
+				vg.StrokeColor(Utility.FromRGBA(0, 0, 0, 255));
 				vg.BeginPath();
 				vg.MoveTo(x, y + i * 10 + 5);
 				vg.LineTo(x + width, y + i * 10 + 5);
 				vg.Stroke();
 			}
 
-			vg.Restore();
+			vg.RestoreState();
 		}
 
 		public static void drawScissor(NvgContext vg, float x, float y, float t)
 		{
-			vg.Save();
+			vg.SaveState();
 
 			// Draw first rect and set scissor to it's area.
 			vg.Translate(x, y);
-			vg.Rotate(NvgUtility.DegToRad(5));
+			vg.Rotate(Utility.DegToRad(5));
 			vg.BeginPath();
 			vg.Rect(-20, -20, 60, 40);
-			vg.FillColor(new Color(255, 0, 0, 255));
+			vg.FillColor(Utility.FromRGBA(255, 0, 0, 255));
 			vg.Fill();
 			vg.Scissor(-20, -20, 60, 40);
 
@@ -1044,22 +857,22 @@ namespace PerfStat.Samples.Demo
 			vg.Rotate(t);
 
 			// Draw the intended second rectangle without any scissoring.
-			vg.Save();
+			vg.SaveState();
 			vg.ResetScissor();
 			vg.BeginPath();
 			vg.Rect(-20, -10, 60, 30);
-			vg.FillColor(new Color(255, 128, 0, 64));
+			vg.FillColor(Utility.FromRGBA(255, 128, 0, 64));
 			vg.Fill();
-			vg.Restore();
+			vg.RestoreState();
 
 			// Draw second rectangle with combined scissoring.
 			vg.IntersectScissor(-20, -10, 60, 30);
 			vg.BeginPath();
 			vg.Rect(-20, -10, 60, 30);
-			vg.FillColor(new Color(255, 128, 0, 255));
+			vg.FillColor(Utility.FromRGBA(255, 128, 0, 255));
 			vg.Fill();
 
-			vg.Restore();
+			vg.RestoreState();
 		}
 
 		public void renderDemo(NvgContext vg, float mx, float my, float width, float height,
@@ -1068,7 +881,6 @@ namespace PerfStat.Samples.Demo
 			float x, y, popy;
 
 			drawEyes(vg, width - 250, 50, 150, 100, mx, my, t);
-			drawParagraph(vg, width - 450, 50, 150, 100, mx, my);
 			drawGraph(vg, 0, height / 2, width, height / 2, t);
 			drawColorwheel(vg, width - 300, height - 300, 250.0f, 250.0f, t);
 
@@ -1083,7 +895,7 @@ namespace PerfStat.Samples.Demo
 
 			drawScissor(vg, 50, height - 80, t);
 
-			vg.Save();
+			vg.SaveState();
 			if (blowup)
 			{
 				vg.Rotate((float)Math.Sin(t * 0.3f) * 5.0f / 180.0f * (float)Math.PI);
@@ -1108,7 +920,7 @@ namespace PerfStat.Samples.Demo
 			drawEditBox(vg, "Password", x, y, 280, 28);
 			y += 38;
 			drawCheckBox(vg, "Remember me", x, y, 140, 28);
-			drawButton(vg, ICON_LOGIN, "Sign in", x + 138, y, 140, 28, new Color(0, 96, 128, 255));
+			drawButton(vg, ICON_LOGIN, "Sign in", x + 138, y, 140, 28, Utility.FromRGBA(0, 96, 128, 255));
 			y += 45;
 
 			// Slider
@@ -1118,13 +930,13 @@ namespace PerfStat.Samples.Demo
 			drawSlider(vg, 0.4f, x, y, 170, 28);
 			y += 55;
 
-			drawButton(vg, ICON_TRASH, "Delete", x, y, 160, 28, new Color(128, 16, 8, 255));
-			drawButton(vg, null, "Cancel", x + 170, y, 110, 28, new Color(0, 0, 0, 0));
+			drawButton(vg, ICON_TRASH, "Delete", x, y, 160, 28, Utility.FromRGBA(128, 16, 8, 255));
+			drawButton(vg, null, "Cancel", x + 170, y, 110, 28, Utility.FromRGBA(0, 0, 0, 0));
 
 			// Thumbnails box
 			drawThumbnails(vg, 365, popy - 30, 160, 300, images, t);
 
-			vg.Restore();
+			vg.RestoreState();
 		}
 	}
 }

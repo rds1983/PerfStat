@@ -1,0 +1,11 @@
+<Project>
+  <PropertyGroup>
+    <Authors>PerfStatTeam</Authors>
+    <Product>PerfStat</Product>
+    <PackageLicenseExpression>Zlib</PackageLicenseExpression>
+    <PackageProjectUrl>https://github.com/rds1983/PerfStat</PackageProjectUrl>
+    <RootNamespace>PerfStat</RootNamespace>
+    <Version>0.6.1</Version>
+    <NvgSharpVersion>0.6.1</NvgSharpVersion>
+  </PropertyGroup>
+</Project>

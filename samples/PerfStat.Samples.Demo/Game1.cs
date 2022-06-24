@@ -2,8 +2,6 @@
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using NvgSharp;
-using System;
-using System.Diagnostics;
 
 namespace PerfStat.Samples.Demo
 {
@@ -23,8 +21,8 @@ namespace PerfStat.Samples.Demo
 		{
 			_graphics = new GraphicsDeviceManager(this)
 			{
-				PreferredBackBufferWidth = 1000,
-				PreferredBackBufferHeight = 600,
+				PreferredBackBufferWidth = 1200,
+				PreferredBackBufferHeight = 800,
 				PreferredDepthStencilFormat = DepthFormat.Depth24Stencil8
 			};
 
@@ -41,12 +39,9 @@ namespace PerfStat.Samples.Demo
 		/// </summary>
 		protected override void LoadContent()
 		{
-			var device = GraphicsDevice;
-
 			_context = new NvgContext(GraphicsDevice);
 
-			_demo = new Demo();
-			_demo.loadDemoData(GraphicsDevice, _context);
+			_demo = new Demo(_context);
 
 			_spriteBatch = new SpriteBatch(GraphicsDevice);
 		}

@@ -1,0 +1,24 @@
+name: Build & Publish Release
+
+on: [workflow_dispatch]
+
+jobs:
+  BuildAndPublish:
+    runs-on: windows-latest
+
+    steps:
+    - uses: actions/checkout@v2
+      with:
+        submodules: recursive
+    - name: Setup .NET Core
+      uses: actions/setup-dotnet@v1
+      with:
+        dotnet-version: '6.0.x'
+    - name: Build PerfStat.MonoGame
+      run: dotnet build build\PerfStat.MonoGame.sln --configuration Release
+    - name: Test
+      run: dotnet test build\PerfStat.MonoGame.sln
+    - name: Install NuGet
+      uses: NuGet/setup-nuget@v1
+    - name: Publish PerfStat.MonoGame to NuGet
+      run: nuget.exe push src\XNA\bin\MonoGame\Release\PerfStat.MonoGame.*.nupkg ${{secrets.NUGET_APIKEY}} -Source https://api.nuget.org/v3/index.json

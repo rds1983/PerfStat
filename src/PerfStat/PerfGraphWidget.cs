@@ -1,24 +1,25 @@
-﻿using Microsoft.Xna.Framework;
+﻿using FontStashSharp;
+using Microsoft.Xna.Framework;
 using NvgSharp;
 
 namespace PerfStat
 {
 	public class PerfGraphWidget
 	{
-		private PerfGraphStyle _style;
-		private string _name;
 		private float[] _values = new float[100];
 		private int _head;
+		private readonly FontSystem _fontSystem;
 
-		public int FontId
-		{
-			get; set;
-		}
+		public PerfGraphStyle Style { get; set; }
+		public string Name { get; set; }
 
 		public PerfGraphWidget(PerfGraphStyle style = PerfGraphStyle.Fps, string name = "Frame Time")
 		{
-			_style = style;
-			_name = name;
+			Style = style;
+			Name = name;
+
+			_fontSystem = new FontSystem();
+			_fontSystem.AddFont(Resources.CreateTtfSystemByteArray());
 		}
 
 		public void Update(double frameTime)
@@ -55,7 +56,7 @@ namespace PerfStat
 
 			vg.BeginPath();
 			vg.MoveTo(x, y + h);
-			if (_style == PerfGraphStyle.Fps)
+			if (Style == PerfGraphStyle.Fps)
 			{
 				for (i = 0; i < _values.Length; i++)
 				{
@@ -68,7 +69,7 @@ namespace PerfStat
 					vg.LineTo(vx, vy);
 				}
 			}
-			else if (_style == PerfGraphStyle.Percent)
+			else if (Style == PerfGraphStyle.Percent)
 			{
 				for (i = 0; i < _values.Length; i++)
 				{
@@ -98,46 +99,39 @@ namespace PerfStat
 			vg.FillColor(new Color(255, 192, 0, 128));
 			vg.Fill();
 
-			var fontId = Resources.GetDefaultFontId(vg);
-			vg.FontFaceId(fontId);
 
-			if (!string.IsNullOrEmpty(_name))
+			if (!string.IsNullOrEmpty(Name))
 			{
-				vg.FontSize(14.0f);
-				vg.TextAlign(Alignment.Left | Alignment.Top);
+				var font = _fontSystem.GetFont(14);
 				vg.FillColor(new Color(240, 240, 240, 192));
-				vg.Text(x + 3, y + 1, _name);
+				vg.Text(font, Name, x + 3, y + 1);
 			}
 
-			if (_style == PerfGraphStyle.Fps)
+			if (Style == PerfGraphStyle.Fps)
 			{
-				vg.FontSize(18.0f);
-				vg.TextAlign(Alignment.Right | Alignment.Top);
+				var font = _fontSystem.GetFont(18);
 				vg.FillColor(new Color(240, 240, 240, 255));
 				str = string.Format("{0:0.00} FPS", 1.0f / avg);
-				vg.Text(x + w - 3, y + 1, str);
+				vg.Text(font, str, x + w - 3, y + 1, TextHorizontalAlignment.Right);
 
-				vg.FontSize(15.0f);
-				vg.TextAlign(Alignment.Right | Alignment.Bottom);
+				font = _fontSystem.GetFont(15);
 				vg.FillColor(new Color(240, 240, 240, 160));
 				str = string.Format("{0:0.00} ms", avg * 1000.0f);
-				vg.Text(x + w - 3, y + h - 1, str);
+				vg.Text(font, str, x + w - 3, y + h - 1, TextHorizontalAlignment.Right, TextVerticalAlignment.Bottom);
 			}
-			else if (_style == PerfGraphStyle.Percent)
+			else if (Style == PerfGraphStyle.Percent)
 			{
-				vg.FontSize(18.0f);
-				vg.TextAlign(Alignment.Right | Alignment.Top);
+				var font = _fontSystem.GetFont(18);
 				vg.FillColor(new Color(240, 240, 240, 255));
 				str = string.Format("{0:0.00} %%", avg);
-				vg.Text(x + w - 3, y + 1, str);
+				vg.Text(font, str, x + w - 3, y + 1, TextHorizontalAlignment.Right);
 			}
 			else
 			{
-				vg.FontSize(18.0f);
-				vg.TextAlign(Alignment.Right | Alignment.Top);
+				var font = _fontSystem.GetFont(18);
 				vg.FillColor(new Color(240, 240, 240, 255));
 				str = string.Format("{0:0.00} ms", avg * 1000.0f);
-				vg.Text(x + w - 3, y + 1, str);
+				vg.Text(font, str, x + w - 3, y + 1, TextHorizontalAlignment.Right);
 			}
 		}
 	}

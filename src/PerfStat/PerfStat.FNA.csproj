@@ -1,0 +1,20 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>netstandard2.0</TargetFramework>
+    <PackageId>PerfStat.FNA</PackageId>
+    <AssemblyName>PerfStat.FNA</AssemblyName>
+    <Description>PerfStat for FNA</Description>
+    <DefineConstants>$(DefineConstants);FNA</DefineConstants>
+    <OutputPath>bin\FNA\$(Configuration)</OutputPath>
+  </PropertyGroup>
+  
+  <ItemGroup>
+    <EmbeddedResource Include="Resources\Roboto-Regular.ttf" />
+  </ItemGroup>     
+  
+  <ItemGroup>
+    <ProjectReference Include="..\..\..\FNA\FNA.csproj" />
+    <ProjectReference Include="..\..\..\FontStashSharp\src\XNA\FontStashSharp.FNA.csproj" />
+    <ProjectReference Include="..\..\..\NvgSharp\src\XNA\NvgSharp.FNA.csproj" />
+  </ItemGroup>
+</Project>
