@@ -20,21 +20,36 @@ There are two ways of referencing PerfStat in the project:
 
 
 # Usage
-1. Add following usings:
+1. PerfStat requires Game to be created with stencil.
+That could be archived by setting PreferredDepthStencilFormat to DepthFormat.Depth24Stencil8 in the GraphicsDeviceManager creation.
+
+I.e.
+```c#
+public Game1()
+{
+	_graphics = new GraphicsDeviceManager(this)
+	{
+		PreferredBackBufferWidth = 1000,
+		PreferredBackBufferHeight = 600,
+		PreferredDepthStencilFormat = DepthFormat.Depth24Stencil8
+	};
+}
+```
+2. Add following usings:
   ```c#
   using NvgSharp;
   using PerfStat;
   ```
-2. Add following fields to the Game:
+3. Add following fields to the Game:
   ```c#
   private NvgContext _nvgContext;
   private readonly PerfGraphWidget _perfGraph = new PerfGraphWidget();
   ```
-3. Add NvgContext creation to the Game.LoadContent:
+4. Add NvgContext creation to the Game.LoadContent:
   ```c#
   _nvgContext = new NvgContext(GraphicsDevice);
   ```
-4. Finally add following code to the Game.Draw:
+5. Finally add following code to the Game.Draw:
   ```c#
   _perfGraph.Update(gameTime.ElapsedGameTime.TotalSeconds);
 
@@ -44,7 +59,7 @@ There are two ways of referencing PerfStat in the project:
   ```  
   Where `graphics` is GraphicsDeviceManager.
 
-5. Performance statistics widget should appear:
+6. Performance statistics widget should appear:
 ![](/images/perfstat.gif)
 
 ## Credits
