@@ -16,7 +16,7 @@ There are two ways of referencing PerfStat in the project:
     
     b. Add src/PerfStat/PerfStat.{Engine}.csproj to the solution.
 
-      * If FNA is used, then [FontStashSharp](https://github.com/FontStashSharp/FontStashSharp) and [NvgSharg](https://github.com/rds1983/NvgSharp) should be cloned too. The overall folder structure is expected to be following: [[images/FolderStructure.png]]
+      * If FNA is used, then [FontStashSharp](https://github.com/FontStashSharp/FontStashSharp) and [NvgSharg](https://github.com/rds1983/NvgSharp) should be cloned too. The overall folder structure is expected to be following: ![](images/FolderStructure.png)
 
 
 # Usage
