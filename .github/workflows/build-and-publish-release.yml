@@ -21,4 +21,4 @@ jobs:
     - name: Install NuGet
       uses: NuGet/setup-nuget@v1
     - name: Publish PerfStat.MonoGame to NuGet
-      run: nuget.exe push src\XNA\bin\MonoGame\Release\PerfStat.MonoGame.*.nupkg ${{secrets.NUGET_APIKEY}} -Source https://api.nuget.org/v3/index.json
+      run: nuget.exe push src\PerfStat\bin\MonoGame\Release\PerfStat.MonoGame.*.nupkg ${{secrets.NUGET_APIKEY}} -Source https://api.nuget.org/v3/index.json
