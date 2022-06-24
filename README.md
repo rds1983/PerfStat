@@ -2,7 +2,7 @@
 [![NuGet](https://img.shields.io/nuget/v/PerfStat.MonoGame.svg)](https://www.nuget.org/packages/PerfStat.MonoGame/) [![Build status](https://ci.appveyor.com/api/projects/status/r4cd8vcao5i84xo7?svg=true)](https://ci.appveyor.com/project/RomanShapiro/PerfStat)
 [![Chat](https://img.shields.io/discord/628186029488340992.svg)](https://discord.gg/ZeHxhCY)
 
-Widget showing the performance of MonoGame/FNA app
+Widget showing the performance of a MonoGame/FNA app
 
 ![](/images/perfwidget.png)
 
